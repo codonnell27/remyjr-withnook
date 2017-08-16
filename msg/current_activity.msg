@@ -1,0 +1,11 @@
+int32 publish_count
+string current_activity
+bool f_bump
+bool r_bump
+bool b_bump
+bool l_bump
+bool drive_f_tof_ok
+bool drive_b_tof_ok
+int32[8] distances
+bool is_level
+bool system_status

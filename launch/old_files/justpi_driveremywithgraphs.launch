@@ -1,0 +1,11 @@
+<launch>
+
+  <node pkg="remyJr" name="sonar_watcher1" type="sonar_watch.py" respawn="true"/>
+  <node pkg="remyJr" name="imu_watcher1" type="imu_watch.py" respawn="true"/>
+  <node pkg="remyJr" name="tof_watcher1" type="tof_watch.py" respawn="true"/>
+  <node pkg="remyJr" name="bump_skirt_watcher" type="bump_watch.py" respawn="true"/>
+  <node pkg="remyJr" name="brain1" type="self_driving_graphs.py" respawn="true"/>
+  <node pkg="remyJr" name="graphics" type="graph_motion_data.py" respawn="true"/>
+  <node pkg="remyJr" name="sensor_monitor" type="sensor_monitor.py" required="true"/>
+
+</launch>

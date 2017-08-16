@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="sound_play" name="speakers" type="soundplay_node.py" respawn="true"/>
+  <node pkg="remyJr" name="oops" type="march.py" respawn="true"/>
+  <node pkg="remyJr" name="brain1" type="brain.py" respawn="true"/>
+  <node pkg="remyJr" name="sensor_monitor" type="sensor_monitor.py" required="true"/>
+
+
+</launch>

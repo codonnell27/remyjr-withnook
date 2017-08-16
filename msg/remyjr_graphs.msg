@@ -1,0 +1,17 @@
+int32 deadzone
+int32 tooCloseDis
+int32 edgeDis
+float32 close_quarters_edgefinding_lim
+int32[8] x_cords
+int32[8] y_cords
+float32 weighted_dis_avg 
+float32 weighted_angle_avg
+float32 x_avg
+float32 y_avg
+float32 turn_val
+float32 drive_val
+float32 close_quarters
+int32 pwm_max
+int32 pwm_min
+int32 pwm_zero_min
+int32 pwm_zero_max

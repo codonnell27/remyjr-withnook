@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+import rospy
+import time
+from sensor_msgs.msg import Joy
+from remyJr.msg import sonar_array
+import RPi.GPIO as GPIO
+import Adafruit_MCP3008
+
+
+
+# Software SPI configuration:
+CLK  = 22
+MISO = 23
+MOSI = 24
+CS   = 25
+mcp = Adafruit_MCP3008.MCP3008(clk=CLK, cs=CS, miso=MISO, mosi=MOSI)
+
+#ADC channel numbers for each sensor
+f_sonar = 0
+f_r_sonar = 6
+r_sonar = 7
+b_r_sonar = 5
+b_sonar = 4
+b_l_sonar = 3
+l_sonar = 2
+f_l_sonar = 1
+
+pin_array = [f_sonar, f_r_sonar, r_sonar, b_r_sonar, b_sonar, b_l_sonar, l_sonar, f_l_sonar]
+
+sonar_array_trig_pin = 27
+sonar_array_read_complete_pin = 21
+
+num_of_sonar = 8
+
+
+
+def readSonarArray(): #reads sonar and determines if it is too close to somethi$
+#        print ('Reading sonar array...')
+        global sonar_dist
+        sonar_dist = [0]*num_of_sonar
+
+#        print ("Triggering array...")
+        GPIO.output(sonar_array_trig_pin, GPIO.HIGH)
+        time.sleep(.001)
+        GPIO.output(sonar_array_trig_pin, GPIO.LOW)
+        time.sleep(0.05*num_of_sonar)
+#        print ('Reading array...')
+
+
+        for i in range(num_of_sonar):
+	        sonar_dist[i] = mcp.read_adc(i)
+
+def orderSonarDist():
+
+	global sonar_dist
+	
+	temp_sonar_dist = [0]*num_of_sonar
+	temp_sonar_dist[0] = sonar_dist[f_sonar]
+        temp_sonar_dist[1] = sonar_dist[f_l_sonar]
+
+
+
+
+
+def start():
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(sonar_array_trig_pin, GPIO.OUT)
+        GPIO.setup(sonar_array_read_complete_pin, GPIO.IN)
+        GPIO.output(sonar_array_trig_pin, GPIO.HIGH)
+        time.sleep(.001)
+        GPIO.output(sonar_array_trig_pin, GPIO.LOW)
+        time.sleep(0.11*num_of_sonar)
+
+
+	pub = rospy.Publisher('remyjr/sonar_dist', sonar_array, queue_size=1)
+	rospy.init_node('sonarreader')	
+	while True:
+	        sonar = sonar_array()
+		readSonarArray()
+		sonar.pins = pin_array_ordered
+		sonar.distances = sonar_dist_ordered
+	        pub.publish(sonar)
+
+
+if __name__ == '__main__':
+	try:
+		start()
+	except KeyboardInterrupt:
+		pass
