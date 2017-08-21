@@ -10,7 +10,6 @@ project(remyJr)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
-  sound_play
   message_generation
 )
 
@@ -115,7 +114,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES remyJr
-  CATKIN_DEPENDS rospy std_msgs message_runtime
+  CATKIN_DEPENDS rospy std_msgs message_runtime sound_play
 #  DEPENDS system_lib
 )
 
