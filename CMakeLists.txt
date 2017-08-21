@@ -10,6 +10,7 @@ project(remyJr)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
+  sound_play
   message_generation
 )
 
@@ -50,7 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    sonar_array.msg
-   remyjr_graphs.msg
+   graphics_data.msg
    imu_data.msg
    tof_data.msg
    sensor_status.msg
@@ -59,6 +60,7 @@ find_package(catkin REQUIRED COMPONENTS
    motor_data.msg
    current_activity.msg
    nook_status.msg
+   graphics_queues.msg
  )
 
 ## Generate services in the 'srv' folder

@@ -9,45 +9,29 @@ import sys
 sys.path.append('/home/pi/github_packages/VL53L0X_rasp_python')
 from python import VL53L0X
 
+# System Dependent Variables
+
+#Shutdown pins
 f_sensor_shdn = 12
 b_sensor_shdn = 6
 
 #these represent the distance that the floor distance
 #any further and this node will report that the floor has diappeared from under the robot
 f_floor_dist = 110 #in mm
-b_floor_dist  =100 
+b_floor_dist  =100
+
+
+#System Independent Variables
 
 f_tof = VL53L0X.VL53L0X(address=0x2B) #object number 0
 b_tof = VL53L0X.VL53L0X(address=0x2D) #object number 1
 
 def readTOF(): #reads time of flight sensors
-	global f_distance, b_distance, b_drive_ok, f_drive_ok, last_b_ok, last_f_ok	
+	global f_distance, b_distance, b_drive_ok, f_drive_ok, last_b_ok, last_f_ok
 	f_distance = f_tof.get_distance()
 	b_distance = b_tof.get_distance()
 
 	# b_drive_ok and f_drive_ok represent whether it's okay to drive forward
-	# there have to be two consecutive readings of a cliff before the node will report
-	# that there is a cliff; this is to help prevent false positives
-#	if b_distance > b_floor_dist:
-#		if last_b_ok == False:
-#			b_drive_ok = False
-#		else: 
-#			b_drive_ok = True
-#		last_b_ok = False
-#	else:
-#		last_b_ok = True
-#		b_drive_ok = True
-#		
-##	if f_distance > f_floor_dist:
-###		if last_f_ok == False:
-#			f_drive_ok = False
-#		else: 
-#			f_drive_ok = True
-#		last_f_ok = False
-#	
-#	else:
-#		last_f_ok = True
-#		f_drive_ok = True
         if f_distance > f_floor_dist:
                 f_drive_ok = False
         else:
@@ -60,9 +44,10 @@ def readTOF(): #reads time of flight sensors
 		b_drive_ok = True
 
 def destroy():
+	# shuts off the sensors
 	f_tof.stop_ranging()
 	b_tof.stop_ranging()
-	
+
 	GPIO.output(f_sensor_shdn, GPIO.LOW)
 	GPIO.output(b_sensor_shdn, GPIO.LOW)
 	GPIO.cleanup()
@@ -75,14 +60,14 @@ def start():
 	f_drive_ok = False
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
-	GPIO.setup(f_sensor_shdn, GPIO.OUT) 
+	GPIO.setup(f_sensor_shdn, GPIO.OUT)
 	GPIO.setup(b_sensor_shdn, GPIO.OUT)
 	GPIO.output(f_sensor_shdn, GPIO.LOW) #when the shutdown pins are low, the sensor doesn't range
 	GPIO.output(b_sensor_shdn, GPIO.LOW)
 	time.sleep(0.5)
 
 	#starts the front sensor
-        GPIO.output(f_sensor_shdn, GPIO.HIGH) 
+        GPIO.output(f_sensor_shdn, GPIO.HIGH)
         time.sleep(0.5)
         f_tof.start_ranging(VL53L0X.VL53L0X_BETTER_ACCURACY_MODE)
 
@@ -92,7 +77,7 @@ def start():
         b_tof.start_ranging(VL53L0X.VL53L0X_BETTER_ACCURACY_MODE)
 
 	pub = rospy.Publisher('remyjr/tof_data', tof_data, queue_size=1)
-	rospy.init_node('tofreader')	
+	rospy.init_node('tofreader')
 	rate = rospy.Rate(30)
 	publish_count = 0
 	while not rospy.is_shutdown():

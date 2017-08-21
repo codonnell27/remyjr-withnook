@@ -8,6 +8,7 @@
     timeout="11"
   /> 
 
+
   <node machine="remy-jr" pkg="remyJr" name="sonar_watcher1" type="sonar_watch.py" respawn="true"/>
   <node machine="remy-jr" pkg="remyJr" name="imu_watcher1" type="imu_watch.py" respawn="true"/>
   <node machine="remy-jr" pkg="remyJr" name="tof_watcher1" type="tof_watch.py" respawn="true"/>

@@ -2,22 +2,17 @@
 import rospy
 import time
 import numpy as np
-from sensor_msgs.msg import Joy
 from remyJr.msg import sonar_array
 import RPi.GPIO as GPIO
 import Adafruit_MCP3008
-from std_msgs.msg import Int32
 
-#when testing specific sonar or drive features, this allows false data (or edge-case data) to be passed forward
-testing = False
-test_sonar_num = 3 #the specific sonar that's beign tested
-test_dis = 150 #the false distance given to all the other sonars
+# System Dependent Variables
 
 # Software SPI configuration:
-CLK  = 18
-MISO = 27
-MOSI = 17
-CS   = 4
+CLK  = 18 #CLK pin on ADC
+MISO = 27 #Dout pin on ADC
+MOSI = 17 #Din pin on ADC
+CS   = 4  #CS/SHDN pin on ADC
 mcp = Adafruit_MCP3008.MCP3008(clk=CLK, cs=CS, miso=MISO, mosi=MOSI)
 
 #ADC channel numbers for each sensor
@@ -30,24 +25,36 @@ b_l_sonar = 7
 l_sonar = 6
 f_l_sonar = 4
 
+sonar_array_trig_pin = 5
+
+
+# System Indepenent Variables
+
+#when testing specific sonar or drive features, this allows false data (or edge-case data) to be passed forward
+testing = False
+test_sonar_num = 3 #the specific sonar that's beign tested
+test_dis = 150 #the false distance given to all the other sonars
+
 #determines the order that the distances are passed to the topic
 #currently clockwise from front
 pin_array = [f_sonar, f_r_sonar, r_sonar, b_r_sonar, b_sonar, b_l_sonar, l_sonar, f_l_sonar]
 
 # this number represents the number of times a sonar has to return the same-ish number before
-# this node will consider it overheated
+# this node will consider it overheated. If it then stops returning one of those numbers the system
+# will no longer consider it overheated.
+# I.e. if the robot stops for no decernable reason try walking a slow but tight circle around it
 overheat_threshold = 1000
 
-sonar_rate = 30 #in hz, this is how quickly the program runs
+sonar_rate = 20 #in hz, this is how quickly the program runs
 
-sonar_array_trig_pin = 5
 num_of_sonar = 8
 #this is the number of past readings of sonar the node remembers
 queue_len = 7
 
 def resetArray():
-	GPIO.setup(sonar_array_trig_pin, GPIO.OUT)
-	        #triggers the first sonar
+	# this is used every once in a while to reset the sonars
+
+	GPIO.setup(sonar_array_trig_pin, GPIO.OUT) #prevents the array from tiggering itself
         GPIO.output(sonar_array_trig_pin, GPIO.LOW)
 	time.sleep(0.13) #gives the array time to stop ranging
         GPIO.output(sonar_array_trig_pin, GPIO.HIGH) #starts the array ranging
@@ -65,21 +72,12 @@ def moveQueue():
 		dis_queue[i, queue_len -1] = 0
 
 def avgQueue(i):
+	# the sonars don't always return consistent readings, so this helps with that
 	sum = 0
 	for j in range(queue_len):
 		sum = sum + dis_queue[i,j]
 	avg =int( sum / queue_len)
 	return avg
-
-def getMedian():
-	#using medians instead of averages means that the robot responds slower
-	global medians
-	medians = np.zeros(num_of_sonar)
-	temp = np.sort(dis_queue)
-	print temp
-	for i in range(num_of_sonar):
-		medians[i] = temp[i, int(queue_len/2)]
-	return medians
 
 def readSonarArray():
 	#reads sonars
@@ -146,7 +144,7 @@ def start():
 		readSonarArray()
 		sonar.publish_count = publish_count
 		sonar.distances = sonar_dist
-		if testing == True: #allows false or edge-case data to be given if something is beign tested
+		if testing == True: #allows false or edge-case data to be given if something is being tested
 			sonar.distances = [150]*num_of_sonar
 			sonar.distances[test_sonar_num] = test_dis
 		rospy.loginfo(sonar)

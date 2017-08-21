@@ -9,6 +9,9 @@ from remyJr.msg import bump_data
 from remyJr.msg import current_activity
 from remyJr.msg import motor_data
 
+
+monitor_rate = 4 # in Hz. This need to be slower then any of the sensor nodes rates
+
 # these functions report whether the specific sensor is online
 # since each message published by a sensor is tagged with a publish count,
 # it can check to see if the current_sensor_time (current publish count)
@@ -129,7 +132,7 @@ def reportStatus():
 	current_sonar_time = 20000002
 	pub = rospy.Publisher('remyjr/sensor_status', sensor_status, queue_size = 1)
 	rospy.init_node('sensor_watch', anonymous=True)
-	rate = rospy.Rate(2)
+	rate = rospy.Rate(monitor_rate)
 	publish_count = 0
 	while not rospy.is_shutdown():
 		statusListener()

@@ -3,6 +3,9 @@ import rospy
 from remyJr.msg import sensor_status
 from remyJr.msg import nook_status
 
+monitor_rate = 2 # in Hz, this needs to be the same or slower then the sensor_monitor rate
+
+
 # this node reports whether the nook is commected to the raspberry pi
 # since each message published by the sensor monitor node is tagged with a publish count,
 # it can check to see if the current_sensor_time (current publish count)
@@ -41,7 +44,7 @@ def reportStatus():
         current_nook_time = 30000021
         pub = rospy.Publisher('remyjr/nook_status', nook_status, queue_size = 1)
         rospy.init_node('nook_watch', anonymous=True)
-        rate = rospy.Rate(2)
+        rate = rospy.Rate(monitor_rate)
         publish_count = 0
         while not rospy.is_shutdown():
                 statusListener()

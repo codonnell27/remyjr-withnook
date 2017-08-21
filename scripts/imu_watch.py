@@ -6,53 +6,46 @@ import rospy
 from remyJr.msg import imu_data
 from Adafruit_BNO055 import BNO055
 import math
-level_grav_x = -0.51 #the acceleration due to gravity in the x-direction when the robot is at rest  
+
+
+# system dependent variables:
+
+#the acceleration due to gravity in the x-direction when the robot is at rest
+# if the acceleration due to gravity in the x-direction is more than this value away from the level
+# value then this node reports that the robot is no longer level
+# If this code is used on a different system then this may need to be changed.
+level_grav_x = -0.5
+
+# This determines how far away from level_grav_x the robot needs to be before it is no longer
+# considered level. If this code is used on a different robot then the original remyJr then
+# this number may need to change depending on how close to the axis of rotation the imu is
 jump_threshold = 1.5
-turn_threshold = 2
-loop_period = 0.05
 
+reset_pin = 21
 
+# System independent Variables
+
+loop_freq = 20 # in hz
 
 def findIfLevel():
 	#decides whether the robot is level
 	if (grav_x < level_grav_x-jump_threshold) | (grav_x > level_grav_x + jump_threshold):
 		return False
-	else:	
+	else:
 		return True
 
-def findIfTurning():
-	#decides whether the robot is turning
-	global last_heading, heading_delta
-	isTurning = False	
-	heading_delta = heading - last_heading
-	#this next part prevents giant heading_delta that results from the robot 
-	#going from a ~350 degree heading to a ~10 degree heading or vice versa
-	if heading_delta > 180:
-		heading_delta = heading_delta -360
-	elif heading_delta < -180:
-		heading_delta = 360 + heading_delta 
-	if (heading_delta < -turn_threshold) | (heading_delta > turn_threshold):
-		isTurning = True
-	last_heading = heading
-	return isTurning
-
 def start():
-	global heading, pitch, roll, last_heading, heading_delta, grav_x
-	heading = 1000
-	pitch = 1000
-	roll = 1000
-	last_heading = 1000
-	heading_delta = 1000
-	
-	# Create and configure the BNO sensor connection.  
+	global grav_x
+
+	# Create and configure the BNO sensor connection.
 	# Raspberry Pi configuration with serial UART and RST connected to GPIO 21:
-	bno = BNO055.BNO055(serial_port='/dev/ttyAMA0', rst=21)
+	bno = BNO055.BNO055(serial_port='/dev/ttyAMA0', rst=reset_pin)
 
 
 	# Initialize the BNO055 and stop if something went wrong.
 	if not bno.begin():
 	    raise RuntimeError('Failed to initialize BNO055! Is the sensor connected?')
-	
+
 	# Print system status and self test result.
 	status, self_test, error = bno.get_system_status()
 	print('System status: {0}'.format(status))
@@ -73,7 +66,7 @@ def start():
 
 	pub = rospy.Publisher('remyjr/imu_data', imu_data, queue_size = 1)
 	rospy.init_node('imureader')
-	rate = rospy.Rate(1/loop_period)
+	rate = rospy.Rate(loop_freq)
 	publish_count = 0
 
 	print('Reading BNO055 data, press Ctrl-C to quit...')
@@ -83,9 +76,10 @@ def start():
 		# Read the calibration status, 0=uncalibrated and 3=fully calibrated.
 		sys, gyro, accel, mag = bno.get_calibration_status()
 		#gets the acceleration due to gravity in each direction
-		grav_x, grav_y, grav_z = bno.read_gravity()		
-		mag_x, mag_y, mag_z = bno.read_magnetometer()
-		
+		grav_x, grav_y, grav_z = bno.read_gravity()
+		# an exaustive list of possible bno functions can be found in the example
+		# in the bno package
+
 		data = imu_data()
 		data.publish_count = publish_count
                 data.is_level = findIfLevel()
@@ -93,12 +87,11 @@ def start():
                 pub.publish(data)
                 publish_count += 1
 
-		print mag_x, mag_y, mag_z
-		# Sleep for a second until the next reading.
+		# Sleep for a bit until the next reading.
 		rate.sleep()
 
 if __name__ == '__main__':
-	try: 
+	try:
 		start()
 	except KeyboardInterrupt:
 		pass

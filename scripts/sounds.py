@@ -7,8 +7,10 @@ from remyJr.msg import bump_data
 from remyJr.msg import sonar_array
 sound_client = SoundClient()
 
+# this node allows the robot to play noises when it hits something
 
-# all of these addresses begin in ~/catkin_ws/src/audio_commons/sound_play/sounds
+
+# all of these addresses begin in sound_play/sounds
 quack = sound_client.waveSound('WAV/Quack.wav')
 oops = sound_client.waveSound( 'oops.wav')
 bip = sound_client.waveSound('WAV/Bip.wav')
@@ -32,8 +34,6 @@ temple= sound_client.waveSound('WAV/Temple.wav')
 eep = sound_client.waveSound('WAV/Wild Eep.wav')
 disassemble = sound_client.waveSound('No_disassemble.wav')
 
-sound_array = [quack, oops, bip, drop, monkey, uhoh, boing, indigo, moof, click, volt, toy, laugh, newbip, sosumi, whit, klank, log, pong, temple, eep]
-
 def playSound():
 	# sound when the robot has hit something
 	if terrible_mistake:
@@ -47,31 +47,14 @@ def oopsListener(data):
 	else:
 		terrible_mistake = False
 
-def sonarListener(data):
-	# used if I want different sounds to play depending on how close
-	# objects are
-	global sonar_yellow, sonar_red
-	if data.distances[0] < 30:
-		sonar_red = True
-		sonar_yellow = False
-	elif data.distances[0] < 60:
-		sonar_red = False
-		sonar_yellow = True
-	else:
-		sonar_red = False
-		sonar_yellow = False
-
 def listener():
 	rospy.Subscriber("remyjr/bump_data", bump_data, oopsListener, queue_size=1)
-	rospy.Subscriber('remyjr/sonar_data', sonar_array, sonarListener, queue_size =1)	
 
 def setup():
-	global terrible_mistake
-	terrible_mistake = True
 	rospy.init_node('play_sound_file')
 	rospy.sleep(2)
 	listener()
-	
+
 def mainloop():
 	while not rospy.is_shutdown():
 		listener()

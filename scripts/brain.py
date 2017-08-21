@@ -5,7 +5,7 @@ from remyJr.msg import imu_data
 from remyJr.msg import tof_data
 from remyJr.msg import current_activity
 from remyJr.msg import sonar_array
-from remyJr.msg import remyjr_graphs
+from remyJr.msg import graphics_data
 from remyJr.msg import bump_data
 from remyJr.msg import pwm_val
 from remyJr.msg import motor_data
@@ -13,7 +13,10 @@ import rospy
 import time
 import math
 
+# both of these variables correspond to array lengths in sonar_data.msg,
+# pwm_val.msg and motor_data.msg
 num_of_sonar = 8
+pwm_command_queue_len = 50
 
 #PWM values
 drive_speed_max = 329
@@ -32,16 +35,13 @@ drive_speed_zero_lowlim = 306
 # accel_const determines the slope of the acceleration curve
 # it must be between 0 and 1
 # sleep_time (in seconds) determines the time the motors rest between changing PWM values
-accel_const = 0.1
-sleep_time = 0.05
+accel_const = 0.15
+sleep_time = 0.06
 
 #determines how fast the robot turns when edgefinding
 # edgefind_speed must be between -1 and 1 (a negative number
 # will result in the robot turning in the opposite direction)
-# sleep_time_edgefinding determines how long the robot sleeps
-# between changing PWM values while edgefinding
 edgefind_speed = 0.35
-sleep_time_edgefinding = 0.01
 
 # how fast the robot turns when avoiding obstacles
 # a smaller value is usually better to avoid overshooting
@@ -77,26 +77,13 @@ tooCloseDis = 60
 # when how_close is less than close_quarters_edgefinding_lim then the robot won't edgefind
 # it will just drive straight until it finds and obstacle or it is no longer in such a
 # confined space
-close_quarters_edgefinding_lim = 0.65
-
-#these are are used in conjunction with IMU data to decide
-# whether the robot is level
-# the first value is the acceleration due to gravity in the
-# x-direction when the robot is at rest
-level_grav_x = -0.51
-# this value represents how far away from the above value the imu
-# data for acceleration in the x-direction must be before the robot
-# is no longer considered level
-jump_threshold = 1.5
-
-pwm_command_queue_len = 50
+close_quarters_edgefinding_lim = 0.6
 
 def setup():
 	global  motor_change_num, current_l, sonar_dis, x_cord, y_cord, isAvoiding, immediate_danger_f, immediate_danger_b
         global f_sonar, f_r_sonar, r_sonar, b_r_sonar, b_sonar, b_l_sonar, l_sonar, f_l_sonar, tof_drive_ok_f, tof_drive_ok_b
 	global avoid_direction_count, avoid_direction, sensor_ok, current_act, is_level, r_bump, l_bump
 	global danger_prevented, f_bump, b_bump, current_a, avoidance_count, found_far_away, pwm_command_num, pwm_publish_count, last_pwm_command_num
-        global pwm_command_drive_queue, pwm_command_turn_queue, pwm_command_num_queue
 	#these values represent the order in which seach sonar's data is sent
         f_sonar = 0
         f_r_sonar = 1
@@ -116,15 +103,14 @@ def setup():
 	# helps keep the robot from getting stuck
 	avoidance_count = 0
 
-        pwm_command_turn_queue = [0]*(pwm_command_queue_len)
-        pwm_command_drive_queue = [0]*(pwm_command_queue_len)
-        pwm_command_num_queue = [0]*(pwm_command_queue_len)
         rospy.init_node('robot_brain')
         global pub1, pub2, pub3
-        pub1=rospy.Publisher('remyjr/motion_data', remyjr_graphs, queue_size=1)
+        pub1=rospy.Publisher('remyjr/motion_data', graphics_data, queue_size=1)
         pub2=rospy.Publisher('remyjr/current_activity', current_activity, queue_size=1)
-        pub3=rospy.Publisher('remyjr/pwm_val', pwm_val)
+        pub3=rospy.Publisher('remyjr/pwm_val', pwm_val, queue_size = 3)
 
+	# these keep track of how many pwm commands this node has sent and help other
+	# nodes keep track of whether a command has been followed by the robot
 	last_pwm_command_num = -1
 	pwm_command_num = 0
 	pwm_publish_count = 0
@@ -156,7 +142,7 @@ def setup():
 	# True when the robot is facing the direction with the furthest objects
 	found_far_away = False
 
-	# for troubleshooting/monitoring  purposes, this is published to a topic
+	# for troubleshooting/monitoring  purposes, this variable is published to a topic
 	current_act = 'starting up'
 
 	# the drive(l) or turn(a) value that the motor is using (between -1 and 1)
@@ -240,39 +226,24 @@ def accelerate(drive_target, turn_target):
 	setMotors(current_l, current_a)
 
 def setMotors(joy_drive, joy_turn):
-	#sets the motors to a new PWM
+	#sets the motors to a new PWM by sending the correct pwm value to the motor controls on the raspberry pi
 	global  drive_pwm, current_act, danger_prevented, current_a, current_l, turn_pwm, pwm_command_num
 	# these next lines prevent the robot from driving backward or forward when
-	# there is an immediate danger (cliff, close object, bump)
-	# or when one or more sensors are offline
-	findDangers()
+	# one or more sensors are offline
 	if not sensor_ok:
 		# the robot stops moving entirely
 		joy_drive = 0
 		joy_turn = 0
 		danger_prevented = True
 		current_act = "Waiting for all sensors to come back online"
-# these next lines act as an emergency break; they catch any last minute dangers
-# however they make the robots movement a little jerky
-# they are currently disabled - even without them the robot is pretty good at not
-# hitting things
-
-#	elif (joy_drive > 0) & (immediate_danger_f):
-#		# the robot stops suddenly and is prevented from driving forward
-#		joy_drive = 0
-#		danger_prevented = True
-#		current_activity = "Danger detected in front - prevented from moving forward"
-#	elif (joy_drive < 0) & (immediate_danger_b):
-#		# the robot stops suddenly and is prevented from driving backwards
-#		joy_drive = 0
-#		danger_prevented = True
-#		current_activity = "Danger detected behind - prevented from driving back"
       	current_l = joy_drive
 	current_a = joy_turn
+	#  multilyping the joy_dirve by how_close allows the robot to adjust its speed depending on
+	# how spacious the area it's currently in is. In a more confined space it will go slower.
 	drive_pwm = calcPWM(joy_drive*how_close)
 	turn_pwm = calcPWM(joy_turn*how_close)
-	pwm_command_num +=1
-	publishPWM()
+	pwm_command_num +=1 #so that each pwm command has a distinct number
+	publishPWM() #tells the motor driver node what value to set the motors to
 	time.sleep(sleep_time)
 
 def calcPWM(joy_value):
@@ -301,8 +272,7 @@ def goFarAway():
         # spins the robot to the direction where the sonars are reading the furthest distance
         # if it's already facing the furthest distance it drives forward
         global isAvoiding, current_act, avoidance_direction, found_far_away
-        # this is so that the pause between setting pwm values is shorter to avoid overshooting
-        isAvoiding = True
+        isAvoiding=True
 	if (far_direction == 0) | found_far_away:
 		accelerate(1,0)
 		found_far_away  =True
@@ -326,7 +296,6 @@ def edgefindTurn():
 	#decides whether the robot is facing the right direction and which direction to turn if it's not
 	# "right direction" being that the edge is in the range determined by right_direction and other constants
 	global isAvoiding, current_act
-	# this is so that the pause between setting pwm values is shorter to avoid overshooting
 	isAvoiding = True
 	if (weighted_angle_avg < right_side_low_lim )  | (weighted_angle_avg > right_side_opposite):
 		accelerate(0, edgefind_speed)
@@ -355,15 +324,15 @@ def reverse(go_in_direction):
 		# to ensure that the robot always drives forward if it
 		# hits something behind or if there is a cliff
 		c_l = 0.5
-	if avoidance_count >= 5:
+	if avoidance_count >= 2:
 		# if the robot has been trying to turn to avoid the same obstacles for a while
 		# and has switched the directions it's turning to try and avoid the obstacle at
 		# at least five times it backs up instead
-		c_l = 1
+		c_l = 0.5
 		current_act= "unable to turn successfully, reversing"
 		avoidance_count = 0
 	accelerate(go_in_direction, avoid_direction*obstacle_avoidance_speed)
-	time.sleep(0.4)
+	time.sleep(0.4) #ensures the robot goes far enough away from the obstacle
 	updateAvoidDirection()
 	if go_in_direction*abs(c_l) !=0:
 		accelerate(0,0)
@@ -381,23 +350,6 @@ def updateAvoidDirection():
 	else:
 		avoid_direction_count +=1
 
-def findDangers():
-	#determines if there are an immediate dangers
-	# (cliff, object, the robot hit something) in front or behind
-	# this is called every time the motors are set to a new PWM value
-	# to do a last-minute check that there is nothing that the robot
-	# will hit/fall down
-
-	global immediate_danger_f, immediate_danger_b
-	if (not tof_drive_ok_f) | (sonar_dis[f_sonar] < front_distance ) | f_bump:
- 		immediate_danger_f = True
-	else:
-		immediate_danger_f = False
-        if (not tof_drive_ok_b) | (sonar_dis[b_sonar] < front_distance) | b_bump:
-                immediate_danger_b = True
-        else:
-                immediate_danger_b = False
-
 def motion():
 	#main driving function
 	global current_act, avoidance_count,avoid_direction, found_far_away
@@ -410,38 +362,29 @@ def motion():
 		found_far_away = False
 		avoidance_count = 0 #resets this count since the robot did not have to reverse
 		current_act  = "waiting for all sensors to come online again"
-	elif ((not tof_drive_ok_f) & (not tof_drive_ok_b)) | r_bump | l_bump:
+	elif ((not tof_drive_ok_f) & (not tof_drive_ok_b)):
 		#stops and turns if there are cliffs in front and back
-                if r_bump:
-                        current_act = "robot hit something on the right"
-                        avoid_direction = 1
-                elif l_bump:
-                        avoid_direction = -1
-                        current_act = "robot hit something on the side, reversing"
-                else:
-                        current_act = "cliff detected in front and behind - %f" % (avoid_direction*obstacle_avoidance_speed)
+                current_act = "cliff detected in front and behind - %f" % (avoid_direction*obstacle_avoidance_speed)
 		reverse(0)
 		found_far_away = False
 	elif ((not tof_drive_ok_b) | (b_bump)):
 		#if there is a cliff behind or it ran into something, it stops, goes forward, and turns
 		reverse(1)
 		found_far_away = False
-		if not tof_drive_ok_b:
-			current_act = "cliff detected behind, driving forward %f" % (avoid_direction*obstacle_avoidance_speed)
-		else:
-			current_act = "robot hit something in back, driving forward %f" % (avoid_direction*obstacle_avoidance_speed)
+		current_act = "hazard behind the robot, driving forward %f" % (avoid_direction*obstacle_avoidance_speed)
         elif ((not tof_drive_ok_f)| (f_bump)) | (not is_level):
                 # stops, backs up, and turns if there is a cliff, it ran into something,
                 # or is not level.
                 reverse(-1)
                 found_far_away = False
-                #sets current_activity to the correct activity
-                if not tof_drive_ok_f:
-                        current_act = "cliff detected in front  reversing %f" % (avoid_direction*obstacle_avoidance_speed)
-                elif f_bump:
-                        current_act = "robot hit something in front, reversing %f" % (avoid_direction*obstacle_avoidance_speed)
-                else:
-                        current_act = "no longer level - reversing %f" % (avoid_direction*obstacle_avoidance_speed)
+                current_act = "hazard is in front - reversing %f" % (avoid_direction*obstacle_avoidance_speed)
+        elif r_bump | l_bump:
+                if r_bump:
+                        current_act = "robot hit something on the right"
+                elif l_bump:
+                        current_act = "robot hit something on the left, reversing"
+                reverse(0.1)
+                found_far_away = False
 	elif (sonar_dis[f_sonar] < tooCloseDis)| (sonar_dis[f_l_sonar] < deadzone) | (sonar_dis[f_r_sonar] < deadzone):
 		#when there is something in front of the robot it stops and turns
 		current_act = "obstacle - stopping and turning %f" % (avoid_direction*obstacle_avoidance_speed)
@@ -531,18 +474,13 @@ def avgCord():
                         far_direction = i
                         far_dis = sonar_dis[i]
 
-def moveQueue(queue, newest_entry):
-        for i in range(len(queue)-1):
-                queue[i] = queue[i+1]
-        queue[len(queue)-1] = newest_entry
-        return queue
-
 def sonarlistener(data):
         #listens for the sonar data
         global sonar_dis
         sonar_dis = data.distances
 
 def imuListener(data):
+	# listens to see if the imu thinks the robot is level
         global is_level
         is_level = data.is_level
 
@@ -574,17 +512,13 @@ def sensorListener():
         rospy.Subscriber("remyjr/bump_data", bump_data, bumpSkirtListener, queue_size=1)
 
 def publishPWM():
+	# this publishes the latest pwm command values and associated data so that the motor control node
+	# can set the motors and so that the graphics node can plot a history of the pwm command values
+	# also logs all of this
 	global pub3, pwm_publish_count
-        global pwm_command_drive_queue, pwm_command_turn_queue, pwm_command_num_queue
-        pwm_command_drive_queue = moveQueue(pwm_command_drive_queue, drive_pwm)
-        pwm_command_turn_queue = moveQueue(pwm_command_turn_queue, turn_pwm)
-        pwm_command_num_queue = moveQueue(pwm_command_num_queue, pwm_command_num)
 	pwm_data = pwm_val()
 	pwm_data.drive_pwm = drive_pwm
 	pwm_data.turn_pwm = turn_pwm
-	pwm_data.turn_pwm_queue = pwm_command_turn_queue
-	pwm_data.drive_pwm_queue = pwm_command_drive_queue
-	pwm_data.pwm_command_num_queue = pwm_command_num_queue
 	pwm_data.publish_count = pwm_publish_count
 	pwm_data.pwm_command_num = pwm_command_num
 	pwm_publish_count +=1
@@ -592,9 +526,11 @@ def publishPWM():
 	pub3.publish(pwm_data)
 
 def publishData():
-	# sends the data to the graphing node and current_activity node
+	# sends sonar data to the graphing node and the brain's current activity
+	# and sensor data to the current_activity node
+	# also logs all of this
 	global pub1, pub2
-	motion_data = remyjr_graphs()
+	motion_data = graphics_data()
 	motion_data.deadzone = deadzone
 	motion_data.tooCloseDis = tooCloseDis
 	motion_data.edgeDis = edge_dis
