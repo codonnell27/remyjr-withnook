@@ -5,7 +5,7 @@ from remyJr.msg import pwm_val
 from remyJr.msg import graphics_data
 import rospy
 import numpy as np
-node_rate = 46  #in Hz
+node_rate = 32  #in Hz
 motor_queue_len = 100
 
 

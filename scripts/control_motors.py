@@ -20,7 +20,7 @@ turnPin = 1
 #System Independent Variables
 pwm = Adafruit_PCA9685.PCA9685()
 
-motor_control_rate = 20 # in hz, this is so high to that this node runs as frequently as possible
+motor_control_rate = 25 # in hz, this is so high to that this node runs as frequently as possible
 
 def setup():
 	global system_ok, motor_change_num, drive_val,  turn_val, brain_command_num, last_command_num, nook_ok
