@@ -20,7 +20,7 @@ turnPin = 1
 #System Independent Variables
 pwm = Adafruit_PCA9685.PCA9685()
 
-motor_control_rate = 42 # in hz, this is so high to that this node runs as frequently as possible
+motor_control_rate = 20 # in hz, this is so high to that this node runs as frequently as possible
 
 def setup():
 	global system_ok, motor_change_num, drive_val,  turn_val, brain_command_num, last_command_num, nook_ok
@@ -98,7 +98,7 @@ def tofListener(data):
 
 def listener():
 	rospy.Subscriber("remyjr/nook_status", nook_status, nookListener, queue_size = 1)
-	rospy.Subscriber("remyjr/pwm_val", pwm_val, pwmListener, queue_size=5)
+	rospy.Subscriber("remyjr/pwm_val", pwm_val, pwmListener, queue_size=1)
 	rospy.Subscriber("remyjr/tof_data", tof_data, tofListener, queue_size=1)
 	rospy.Subscriber("remyjr/sensor_status",  sensor_status, statusListener, queue_size=1)
 
@@ -117,7 +117,7 @@ def publishData():
 def mainLoop():
 	rospy.init_node('robot_motors')
 	global pub
-	pub=rospy.Publisher('remyjr/motor_data', motor_data, queue_size=5)
+	pub=rospy.Publisher('remyjr/motor_data', motor_data, queue_size=1)
 	rate = rospy.Rate(motor_control_rate)
 	while not rospy.is_shutdown():
 	   try:
