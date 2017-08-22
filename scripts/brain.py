@@ -36,7 +36,7 @@ drive_speed_zero_lowlim = 306
 # it must be between 0 and 1
 # sleep_time (in seconds) determines the time the motors rest between changing PWM values
 accel_const = 0.15
-sleep_time = 0.06
+sleep_time = 0.065
 
 #determines how fast the robot turns when edgefinding
 # edgefind_speed must be between -1 and 1 (a negative number

@@ -192,7 +192,7 @@ def queueListener(data):
 
 def listener():
 	rospy.Subscriber("remyjr/motion_data", graphics_data, motionDataListener, queue_size = 1)
-	rospy.Subscriber("remyjr/graphics_queues", graphics_queues, queueListener)
+	rospy.Subscriber("remyjr/graphics_queues", graphics_queues, queueListener, queue_size = 1)
 
 def mainLoop():
 	setup()

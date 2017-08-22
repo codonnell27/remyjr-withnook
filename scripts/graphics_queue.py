@@ -47,7 +47,7 @@ def motionDataListener(data):
 def motorListener(data):
 	global motor_val_turn_queue, motor_val_drive_queue, motor_val_num_queue, last_motor_command_num
 	if last_motor_command_num != data.last_command_count:
-		# updates thr queues to account for new data
+		# updates the queues when there is  new data
 		motor_val_turn_queue = moveQueue(motor_val_turn_queue, data.last_turn_val)
 		motor_val_drive_queue = moveQueue(motor_val_drive_queue, data.last_drive_val)
 		motor_val_num_queue = moveQueue(motor_val_num_queue, data.last_command_count)
