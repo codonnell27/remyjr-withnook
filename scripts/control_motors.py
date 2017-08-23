@@ -20,8 +20,7 @@ turnPin = 1
 #System Independent Variables
 pwm = Adafruit_PCA9685.PCA9685()
 
-motor_control_rate = 20 # in hz, this is so high to that this node runs as frequently as possible
-
+sleep_time = 0.01
 def setup():
 	global system_ok, motor_change_num, drive_val,  turn_val, brain_command_num, last_command_num, nook_ok
 	system_ok = False
@@ -62,6 +61,7 @@ def setMotors(joy_drive, joy_turn):
 def main():
 	listener()
 	setMotors(drive_val, turn_val)
+	rospy.sleep(sleep_time)
 
 def moveQueue(queue, newest_entry):
 	# updates a queue to the latest values
@@ -118,11 +118,9 @@ def mainLoop():
 	rospy.init_node('robot_motors')
 	global pub
 	pub=rospy.Publisher('remyjr/motor_data', motor_data, queue_size=1)
-	rate = rospy.Rate(motor_control_rate)
 	while not rospy.is_shutdown():
 	   try:
 		main()
-		rate.sleep()
 	   except IOError, err:
 		# helps prevent the program from crashing if
 		# it tries to contact the featherboard in at a bad time

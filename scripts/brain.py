@@ -28,15 +28,15 @@ drive_speed_zero = 315
 # for some reason these don't result in the same speed???
 # for turning, a lower <drive_speed_zero_lowlim PWM value
 # will result in a clockwise turn
-drive_speed_zero_uplim = 324
-drive_speed_zero_lowlim = 306
+drive_speed_zero_uplim = 325
+drive_speed_zero_lowlim = 305
 
 # together these control how fast the robot accelerates
 # accel_const determines the slope of the acceleration curve
 # it must be between 0 and 1
 # sleep_time (in seconds) determines the time the motors rest between changing PWM values
-accel_const = 0.15
-sleep_time = 0.065
+accel_const = 0.2
+sleep_time = 0.07
 
 #determines how fast the robot turns when edgefinding
 # edgefind_speed must be between -1 and 1 (a negative number
@@ -522,7 +522,7 @@ def publishPWM():
 	pwm_data.publish_count = pwm_publish_count
 	pwm_data.pwm_command_num = pwm_command_num
 	pwm_publish_count +=1
-	rospy.loginfo(pwm_data)
+#	rospy.loginfo(pwm_data)
 	pub3.publish(pwm_data)
 
 def publishData():
@@ -558,7 +558,7 @@ def publishData():
 	activity.distances = sonar_dis
 	activity.is_level = is_level
 	activity.system_status = sensor_ok
-	rospy.loginfo(activity)
+#	rospy.loginfo(activity)
 	pub2.publish(activity)
 
 def mainLoop():
@@ -566,6 +566,7 @@ def mainLoop():
 		sensorListener() #listens to sonar data
 		motion() #moves
 		publishData() #sends data to graphing node
+		time.sleep(0.002)
 	setMotors(0,0)
 
 if __name__ == "__main__":
