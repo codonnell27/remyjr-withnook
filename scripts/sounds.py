@@ -51,6 +51,8 @@ def listener():
 	rospy.Subscriber("remyjr/bump_data", bump_data, oopsListener, queue_size=1)
 
 def setup():
+	global terrible_mistake
+	terrible_mistake = False
 	rospy.init_node('play_sound_file')
 	rospy.sleep(2)
 	listener()

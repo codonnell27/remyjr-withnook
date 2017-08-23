@@ -145,7 +145,7 @@ def reportStatus():
 		systems_go.brain_status = brain_ok
 		systems_go.bump_skirt_status = bump_skirt_ok
 		systems_go.motor_control_status = motor_control_ok
-		rospy.loginfo(systems_go)
+#		rospy.loginfo(systems_go)
 		pub.publish(systems_go)
 		publish_count += 1
 		if publish_count >= 2000:
