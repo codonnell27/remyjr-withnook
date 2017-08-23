@@ -21,7 +21,6 @@ turnPin = 1
 pwm = Adafruit_PCA9685.PCA9685()
 
 sleep_time = 0.01
-
 def setup():
 	global system_ok, motor_change_num, drive_val,  turn_val, brain_command_num, last_command_num, nook_ok
 	system_ok = False
